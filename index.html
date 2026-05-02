@@ -540,11 +540,11 @@ header {
 
     <div class="api-row">
       <div class="field">
-        <label>Anthropic API Key</label>
-        <input type="password" id="anthropicKey" placeholder="sk-ant-..." />
+        <label>Anthropic API Key <span id="anthropicStatus" style="font-weight:400;font-size:0.72rem;margin-left:4px;"></span></label>
+        <input type="password" id="anthropicKey" placeholder="sk-ant-api03-..." oninput="validateAnthropicKey(this.value)" />
       </div>
       <div class="field">
-        <label>Google Drive API Key</label>
+        <label>Google Drive API Key <span style="font-weight:300;color:var(--gray-400)">(for public folders)</span></label>
         <input type="password" id="driveApiKey" placeholder="AIza..." />
       </div>
       <div class="field">
@@ -552,6 +552,7 @@ header {
         <input type="password" id="oauthToken" placeholder="ya29... (optional)" />
       </div>
     </div>
+    <div id="keyAlert" style="margin-bottom:0.75rem;"></div>
 
     <div class="form-grid">
       <div class="field">
@@ -699,6 +700,33 @@ function setAlert(id, msg, type) {
   el.innerHTML = msg ? `<div class="alert alert-${type}">${msg}</div>` : '';
 }
 
+function validateAnthropicKey(val) {
+  const status = document.getElementById('anthropicStatus');
+  const keyAlert = document.getElementById('keyAlert');
+  if (!val) { status.textContent = ''; keyAlert.innerHTML = ''; return; }
+  if (val.startsWith('sk-ant-')) {
+    status.style.color = 'var(--green)';
+    status.textContent = '✓ looks valid';
+    keyAlert.innerHTML = '';
+  } else {
+    status.style.color = 'var(--red)';
+    status.textContent = '✗ should start with sk-ant-';
+    keyAlert.innerHTML = '<div class="alert alert-error">Anthropic API keys start with <strong>sk-ant-api03-</strong>. Get yours at <a href="https://console.anthropic.com" target="_blank" style="color:var(--red);text-decoration:underline;">console.anthropic.com</a> → API Keys.</div>';
+  }
+}
+
+// Extract week number and topic hint from filename
+// e.g. "Algebra 1A - Week23 - Radicals and Radical Equations.pdf"
+function parseFilename(name) {
+  const clean = name.replace(/\.(pdf|pptx?)/i, '');
+  const weekMatch = clean.match(/[Ww]eek\s*(\d+)/);
+  const week = weekMatch ? parseInt(weekMatch[1]) : null;
+  // Extract topic: everything after the last " - " separator
+  const parts = clean.split(/\s*[-–]\s*/);
+  const topic = parts.length >= 3 ? parts.slice(2).join(' - ') : parts[parts.length - 1];
+  return { week, topicHint: topic.trim() };
+}
+
 function extractFolderId(raw) {
   if (raw.includes('folders/')) return raw.split('folders/')[1].split('?')[0].split('/')[0];
   return raw.trim();
@@ -783,9 +811,20 @@ function showProgress(wrapId, fillId, labelId, pct, msg) {
 async function analyzeAll() {
   const grade = getGrade();
   const anthropicKey = getAnthropicKey();
-  if (!anthropicKey) return setAlert('configAlert', 'Please enter your Anthropic API Key to analyze slides.', 'error');
+
+  if (!anthropicKey) {
+    setAlert('configAlert', 'Please enter your Anthropic API Key (sk-ant-api03-...) in the top-left field.', 'error');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  if (!anthropicKey.startsWith('sk-ant-')) {
+    setAlert('configAlert', 'That doesn\'t look like an Anthropic API key. It should start with <strong>sk-ant-api03-</strong>. Get yours at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.', 'error');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
   if (!grade) return setAlert('configAlert', 'Please select a grade level.', 'error');
 
+  setAlert('configAlert', '', '');
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Analyzing...';
@@ -808,8 +847,14 @@ async function analyzeAll() {
     showProgress('loadProgress', 'loadFill', 'loadLabel', pct, `Analyzing ${i+1} of ${allFiles.length}: ${f.name}`);
 
     try {
-      let textContent = `Slide file name: "${f.name}"`;
+      // Parse filename for week and topic hints — your files are already well named!
+      const { week: filenameWeek, topicHint } = parseFilename(f.name);
 
+      let textContent = `Filename: "${f.name}"`;
+      if (topicHint) textContent += `\nTopic extracted from filename: "${topicHint}"`;
+      if (filenameWeek) textContent += `\nWeek extracted from filename: ${filenameWeek}`;
+
+      // Try to get actual slide text content if we have OAuth token
       if (f.source === 'drive' && getToken()) {
         try {
           const expRes = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}/export?mimeType=text/plain`, {
@@ -817,9 +862,9 @@ async function analyzeAll() {
           });
           if (expRes.ok) {
             const txt = await expRes.text();
-            textContent += `\n\nSlide text content:\n${txt.slice(0, 3000)}`;
+            if (txt && txt.length > 20) textContent += `\n\nSlide text content:\n${txt.slice(0, 3000)}`;
           }
-        } catch(e) {}
+        } catch(e) { /* filename-only analysis still works well */ }
       } else if (f.source === 'local' && f.localFile) {
         try {
           const arrayBuf = await f.localFile.arrayBuffer();
@@ -836,25 +881,24 @@ async function analyzeAll() {
 
       const weeks = getWeeks();
       const context = document.getElementById('context').value.trim();
-      const prompt = `You are an expert math curriculum specialist analyzing a slide deck for ${grade} students at AvatarMath tutoring center.
+      const prompt = `You are an expert math curriculum specialist at AvatarMath tutoring center analyzing a slide deck for ${grade} students.
+${context ? `\nContext: ${context}` : ''}
 
-${context ? `Context: ${context}` : ''}
-
-File: "${f.name}"
-Content: ${textContent}
+${textContent}
 
 The AvatarMath ${grade} curriculum covers these topics: ${topics.join(', ')}.
+The term is ${weeks} weeks long. ${filenameWeek ? `The filename says this is Week ${filenameWeek} — use that as the suggestedWeek unless there is a strong reason not to.` : ''}
 
-This file is slide ${i+1} of ${allFiles.length} total. The term is ${weeks} weeks long.
+Based on the topic hint and filename, map this slide to the best matching curriculum topic and provide learning details.
 
-Respond ONLY with valid JSON (no markdown fences, no preamble):
+Respond ONLY with valid JSON (no markdown fences, no preamble, no explanation):
 {
-  "mainTopic": "single best-matching topic from the curriculum list above",
-  "subtopics": ["2-4 specific subtopics or skills covered"],
-  "suggestedWeek": <suggested week number 1-${weeks} based on typical curriculum progression>,
-  "confidence": "high|medium|low",
-  "notes": "1-2 sentences about what this slide deck covers and how it fits the curriculum",
-  "learningObjectives": ["2-3 student learning objectives from this material"]
+  "mainTopic": "single best-matching topic from the curriculum list",
+  "subtopics": ["2-4 specific skills or concepts covered"],
+  "suggestedWeek": ${filenameWeek || `<number 1-${weeks}>`},
+  "confidence": "high",
+  "notes": "1-2 sentences describing what students learn in this slide deck",
+  "learningObjectives": ["2-3 clear student learning objectives starting with a verb like Solve, Identify, Apply, Graph, Simplify..."]
 }`;
 
       const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -867,25 +911,42 @@ Respond ONLY with valid JSON (no markdown fences, no preamble):
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
+          max_tokens: 800,
           messages: [{ role: 'user', content: prompt }]
         })
       });
 
       const apiData = await apiRes.json();
-      if (apiData.error) throw new Error(apiData.error.message);
+
+      // Surface clear API errors to the user
+      if (apiData.error) {
+        const errType = apiData.error.type || '';
+        if (errType === 'authentication_error' || apiData.error.message?.includes('x-api-key')) {
+          setAlert('configAlert', `<strong>Invalid Anthropic API key.</strong> Please check your key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--red);text-decoration:underline;">console.anthropic.com</a> → API Keys and re-enter it.`, 'error');
+          btn.disabled = false;
+          btn.innerHTML = 'Analyze all with AI';
+          document.getElementById('loadProgress').style.display = 'none';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+        throw new Error(apiData.error.message);
+      }
+
       const raw = apiData.content?.[0]?.text || '{}';
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
 
-      analysisResults.push({ file: f.name, index: i, ...parsed });
+      // Use filename week if AI didn't return one
+      if (!parsed.suggestedWeek && filenameWeek) parsed.suggestedWeek = filenameWeek;
+
+      analysisResults.push({ file: f.name, index: i, filenameWeek, topicHint, ...parsed });
       card.className = 'file-card done';
-      meta.textContent = `Week ${parsed.suggestedWeek || '?'} · ${parsed.confidence} confidence`;
+      meta.textContent = `Week ${parsed.suggestedWeek || '?'} · ${parsed.confidence || 'high'} confidence`;
       topicEl.textContent = parsed.mainTopic || '';
 
     } catch(e) {
-      analysisResults.push({ file: f.name, index: i, mainTopic: 'Unclassified', subtopics: [], suggestedWeek: null, confidence: 'low', notes: `Error: ${e.message}`, learningObjectives: [] });
+      analysisResults.push({ file: f.name, index: i, mainTopic: 'Unclassified', subtopics: [], suggestedWeek: filenameWeek || null, confidence: 'low', notes: `Analysis error: ${e.message}`, learningObjectives: [] });
       card.className = 'file-card error';
-      meta.textContent = 'Analysis failed';
+      meta.textContent = `Error: ${e.message.slice(0, 60)}`;
     }
   }
 
