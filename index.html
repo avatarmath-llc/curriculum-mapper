@@ -617,6 +617,10 @@ header {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           Analyze all with AI
         </button>
+        <button class="btn btn-gold" id="retryBtn" onclick="retryFailed()" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.09"/></svg>
+          Retry failed
+        </button>
       </div>
     </div>
     <div class="file-grid" id="fileGrid"></div>
@@ -901,39 +905,8 @@ Respond ONLY with valid JSON (no markdown fences, no preamble, no explanation):
   "learningObjectives": ["2-3 clear student learning objectives starting with a verb like Solve, Identify, Apply, Graph, Simplify..."]
 }`;
 
-      const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': anthropicKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 800,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-
-      const apiData = await apiRes.json();
-
-      // Surface clear API errors to the user
-      if (apiData.error) {
-        const errType = apiData.error.type || '';
-        if (errType === 'authentication_error' || apiData.error.message?.includes('x-api-key')) {
-          setAlert('configAlert', `<strong>Invalid Anthropic API key.</strong> Please check your key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--red);text-decoration:underline;">console.anthropic.com</a> → API Keys and re-enter it.`, 'error');
-          btn.disabled = false;
-          btn.innerHTML = 'Analyze all with AI';
-          document.getElementById('loadProgress').style.display = 'none';
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
-        }
-        throw new Error(apiData.error.message);
-      }
-
-      const raw = apiData.content?.[0]?.text || '{}';
-      const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      const parsed = await callAnthropicWithRetry(anthropicKey, prompt, btn);
+      if (parsed === null) return; // auth error — already handled
 
       // Use filename week if AI didn't return one
       if (!parsed.suggestedWeek && filenameWeek) parsed.suggestedWeek = filenameWeek;
@@ -944,16 +917,151 @@ Respond ONLY with valid JSON (no markdown fences, no preamble, no explanation):
       topicEl.textContent = parsed.mainTopic || '';
 
     } catch(e) {
-      analysisResults.push({ file: f.name, index: i, mainTopic: 'Unclassified', subtopics: [], suggestedWeek: filenameWeek || null, confidence: 'low', notes: `Analysis error: ${e.message}`, learningObjectives: [] });
+      const { week: filenameWeek2 } = parseFilename(f.name);
+      analysisResults.push({ file: f.name, index: i, mainTopic: 'Unclassified', subtopics: [], suggestedWeek: filenameWeek || null, confidence: 'low', notes: `Error: ${e.message}`, learningObjectives: [] });
       card.className = 'file-card error';
-      meta.textContent = `Error: ${e.message.slice(0, 60)}`;
+      meta.textContent = `Failed — click retry`;
     }
+
+    // Small delay between requests to avoid rate limits
+    if (i < allFiles.length - 1) await sleep(600);
   }
 
-  showProgress('loadProgress', 'loadFill', 'loadLabel', 100, `Done — ${allFiles.length} slides analyzed`);
+  const failCount = analysisResults.filter(r => r.mainTopic === 'Unclassified').length;
+  showProgress('loadProgress', 'loadFill', 'loadLabel', 100,
+    failCount > 0 ? `Done — ${allFiles.length - failCount} succeeded, ${failCount} failed` : `Done — all ${allFiles.length} slides analyzed`);
+
   btn.disabled = false;
   btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Re-analyze all';
 
+  if (failCount > 0) {
+    document.getElementById('retryBtn').style.display = 'inline-flex';
+  }
+
+  if (analysisResults.filter(r => r.mainTopic !== 'Unclassified').length > 0) renderResults();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function callAnthropicWithRetry(key, prompt, btn, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 800,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const apiData = await apiRes.json();
+
+    if (apiData.error) {
+      const errType = apiData.error.type || '';
+      if (errType === 'authentication_error' || apiData.error.message?.includes('x-api-key')) {
+        setAlert('configAlert', `<strong>Invalid Anthropic API key.</strong> Please check your key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--red);text-decoration:underline;">console.anthropic.com</a> → API Keys.`, 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Analyze all with AI'; }
+        document.getElementById('loadProgress').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return null;
+      }
+      if (errType === 'rate_limit_error' || apiData.error.message?.includes('rate limit') || apiRes.status === 429) {
+        if (attempt < maxRetries) {
+          const wait = attempt * 8000; // 8s, 16s back-off
+          showProgress('loadProgress', 'loadFill', 'loadLabel', -1, `Rate limited — waiting ${wait/1000}s before retry ${attempt}/${maxRetries}...`);
+          await sleep(wait);
+          continue;
+        }
+      }
+      if (errType === 'overloaded_error' || apiRes.status === 529 || apiRes.status === 503) {
+        if (attempt < maxRetries) {
+          await sleep(5000 * attempt);
+          continue;
+        }
+      }
+      throw new Error(apiData.error.message || `API error ${apiRes.status}`);
+    }
+
+    const raw = apiData.content?.[0]?.text || '{}';
+    return JSON.parse(raw.replace(/```json|```/g, '').trim());
+  }
+  throw new Error('Max retries exceeded');
+}
+
+async function retryFailed() {
+  const grade = getGrade();
+  const anthropicKey = getAnthropicKey();
+  const topics = CURRICULUM[grade] || [];
+  const weeks = getWeeks();
+  const context = document.getElementById('context').value.trim();
+
+  const failedIndices = analysisResults
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.mainTopic === 'Unclassified')
+    .map(({ r }) => r.index);
+
+  if (!failedIndices.length) return;
+
+  document.getElementById('retryBtn').style.display = 'none';
+  showProgress('loadProgress', 'loadFill', 'loadLabel', 0, `Retrying ${failedIndices.length} failed files...`);
+  document.getElementById('loadProgress').style.display = 'block';
+
+  for (let idx = 0; idx < failedIndices.length; idx++) {
+    const i = failedIndices[idx];
+    const f = allFiles[i];
+    const card = document.getElementById(`fc-${i}`);
+    const meta = document.getElementById(`fm-${i}`);
+    const topicEl = document.getElementById(`ft-${i}`);
+
+    card.className = 'file-card analyzing';
+    meta.textContent = 'Retrying...';
+    showProgress('loadProgress', 'loadFill', 'loadLabel', Math.round(idx / failedIndices.length * 100), `Retrying ${idx+1}/${failedIndices.length}: ${f.name}`);
+
+    const { week: filenameWeek, topicHint } = parseFilename(f.name);
+    let textContent = `Filename: "${f.name}"`;
+    if (topicHint) textContent += `\nTopic from filename: "${topicHint}"`;
+    if (filenameWeek) textContent += `\nWeek from filename: ${filenameWeek}`;
+
+    const prompt = `You are a math curriculum specialist at AvatarMath. Map this slide deck to a curriculum topic for ${grade}.
+
+${textContent}
+
+Topics available: ${topics.join(', ')}.
+Term length: ${weeks} weeks. ${filenameWeek ? `Use week ${filenameWeek} as suggestedWeek.` : ''}
+
+Return ONLY valid JSON, no fences:
+{"mainTopic":"...","subtopics":["..."],"suggestedWeek":${filenameWeek||1},"confidence":"high","notes":"...","learningObjectives":["..."]}`;
+
+    try {
+      const parsed = await callAnthropicWithRetry(anthropicKey, prompt, null);
+      if (!parsed) break;
+      if (!parsed.suggestedWeek && filenameWeek) parsed.suggestedWeek = filenameWeek;
+
+      // Update existing result
+      const resultIdx = analysisResults.findIndex(r => r.index === i);
+      if (resultIdx >= 0) analysisResults[resultIdx] = { ...analysisResults[resultIdx], ...parsed, mainTopic: parsed.mainTopic };
+      else analysisResults.push({ file: f.name, index: i, filenameWeek, topicHint, ...parsed });
+
+      card.className = 'file-card done';
+      meta.textContent = `Week ${parsed.suggestedWeek || '?'} · ${parsed.confidence || 'high'} confidence`;
+      topicEl.textContent = parsed.mainTopic || '';
+    } catch(e) {
+      card.className = 'file-card error';
+      meta.textContent = 'Still failed';
+    }
+
+    if (idx < failedIndices.length - 1) await sleep(800);
+  }
+
+  const stillFailed = analysisResults.filter(r => r.mainTopic === 'Unclassified').length;
+  showProgress('loadProgress', 'loadFill', 'loadLabel', 100, stillFailed > 0 ? `${stillFailed} still failed` : 'All retried successfully!');
+  if (stillFailed > 0) document.getElementById('retryBtn').style.display = 'inline-flex';
   renderResults();
 }
 
@@ -963,7 +1071,11 @@ function renderResults() {
 
   // Slide table
   const tbody = document.getElementById('slideTableBody');
-  const sorted = [...analysisResults].sort((a,b) => (a.suggestedWeek||99) - (b.suggestedWeek||99));
+  const sorted = [...analysisResults].sort((a,b) => {
+    const aw = a.filenameWeek || a.suggestedWeek || 999;
+    const bw = b.filenameWeek || b.suggestedWeek || 999;
+    return aw - bw;
+  });
   tbody.innerHTML = sorted.map(r => `
     <tr>
       <td style="max-width:180px;word-break:break-word;font-size:0.82rem;">${r.file}</td>
@@ -977,7 +1089,7 @@ function renderResults() {
   // Weekly plan
   const byWeek = {};
   analysisResults.forEach(r => {
-    const w = r.suggestedWeek || weeks;
+    const w = r.filenameWeek || r.suggestedWeek || weeks;
     if (!byWeek[w]) byWeek[w] = [];
     byWeek[w].push(r);
   });
@@ -1010,13 +1122,13 @@ function renderResults() {
     grouped[r.mainTopic].push(r);
   });
   const topicsSorted = Object.entries(grouped).sort((a,b) => {
-    const aw = Math.min(...a[1].map(x=>x.suggestedWeek||99));
-    const bw = Math.min(...b[1].map(x=>x.suggestedWeek||99));
+    const aw = Math.min(...a[1].map(x => x.filenameWeek || x.suggestedWeek || 999));
+    const bw = Math.min(...b[1].map(x => x.filenameWeek || x.suggestedWeek || 999));
     return aw - bw;
   });
 
   document.getElementById('overviewBody').innerHTML = topicsSorted.map(([topic, items]) => {
-    const weeksUsed = [...new Set(items.map(i=>i.suggestedWeek).filter(Boolean))].sort((a,b)=>a-b);
+    const weeksUsed = [...new Set(items.map(i => i.filenameWeek || i.suggestedWeek).filter(Boolean))].sort((a,b)=>a-b);
     const allObjectives = [...new Set(items.flatMap(i=>i.learningObjectives||[]))];
     const allSubs = [...new Set(items.flatMap(i=>i.subtopics||[]))];
     return `
@@ -1047,7 +1159,7 @@ function exportCSV() {
   analysisResults.forEach(r => rows.push([
     `"${r.file}"`, `"${r.mainTopic}"`,
     `"${(r.subtopics||[]).join('; ')}"`,
-    r.suggestedWeek||'', r.confidence,
+    r.filenameWeek || r.suggestedWeek || '', r.confidence,
     `"${(r.notes||'').replace(/"/g,"'")}"`,
     `"${(r.learningObjectives||[]).join('; ')}"`
   ].join(',')));
@@ -1062,7 +1174,7 @@ function copyMarkdown() {
   const grade = getGrade();
   let md = `# ${grade} Curriculum Map\n\n`;
   const byWeek = {};
-  analysisResults.forEach(r => { const w = r.suggestedWeek||'?'; if(!byWeek[w]) byWeek[w]=[]; byWeek[w].push(r); });
+  analysisResults.forEach(r => { const w = r.filenameWeek || r.suggestedWeek || '?'; if(!byWeek[w]) byWeek[w]=[]; byWeek[w].push(r); });
   Object.keys(byWeek).sort((a,b)=>Number(a)-Number(b)).forEach(w => {
     md += `## Week ${w}\n`;
     byWeek[w].forEach(r => {
