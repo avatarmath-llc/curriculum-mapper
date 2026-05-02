@@ -576,6 +576,9 @@ header {
             <option>Algebra I</option><option>Geometry</option>
             <option>Algebra II</option><option>Pre-Calculus</option>
           </optgroup>
+          <optgroup label="Test Prep">
+            <option>SAT/ACT Prep</option>
+          </optgroup>
         </select>
       </div>
       <div class="field">
@@ -674,20 +677,94 @@ header {
 
 <script>
 const CURRICULUM = {
-  'Kindergarten': ['counting 1–10','number recognition','basic shapes','patterns','comparing quantities','addition intro'],
-  'Grade 1': ['addition to 20','subtraction to 20','place value (tens/ones)','measurement','telling time','shapes & fractions intro'],
-  'Grade 2': ['addition/subtraction to 100','place value to 1000','multiplication intro','measurement & data','geometry','fractions intro'],
-  'Grade 3': ['multiplication facts','division facts','fractions','area & perimeter','time & measurement','data & graphs'],
-  'Grade 4': ['multi-digit multiplication','long division','fractions & decimals','angles & geometry','factors & multiples','measurement conversions'],
-  'Grade 5': ['decimal operations','fraction operations','volume','coordinate plane','order of operations','patterns & rules'],
-  'Grade 6': ['ratios & rates','percentages','integers','expressions & equations','geometry (area/surface area)','statistics & probability'],
-  'Grade 7': ['proportional relationships','inequalities','geometry (circles/angles)','probability','rational numbers','scale drawings'],
-  'Grade 8': ['linear equations','systems of equations','functions','exponents & scientific notation','Pythagorean theorem','transformations'],
-  'Pre-Algebra': ['variables & expressions','linear equations','inequalities','functions & graphing','proportions','intro to polynomials'],
-  'Algebra I': ['linear equations & inequalities','systems of equations','polynomials','factoring','quadratic equations','functions'],
-  'Geometry': ['triangle congruence & similarity','circles','coordinate geometry','proofs','transformations','area & volume'],
-  'Algebra II': ['polynomial functions','rational functions','exponential & logarithmic functions','sequences & series','conic sections','probability'],
-  'Pre-Calculus': ['trigonometry','vectors & matrices','limits intro','polar coordinates','complex numbers','sequences & series']
+  'Kindergarten': [
+    'Addition & subtraction concepts','Ordinal numbers','Number sense & telling'
+  ],
+  'Grade 1': [
+    'Addition & subtraction strategies','Basic fact fluency','Place value within 100',
+    'Multi-digit addition & subtraction','Word problems','Measurement, geometry, patterns'
+  ],
+  'Grade 2': [
+    'Place value to 1000','Multi-digit addition & subtraction',
+    'Multi-digit multiplication','Multi-digit division','Multi-digit mixed','Fractions as wholes / mixed numbers'
+  ],
+  'Grade 3': [
+    'Drill / speed & mental reasoning','Percents','Proportional ratio/percentage',
+    'Graphs & probability','Absolute value','Number systems & algebraic operations'
+  ],
+  'Grade 4': [
+    'Expressions, equations & inequalities',
+    'One-variable equations','Graphing on a number line','Inequalities',
+    'Polynomials','Factoring','Factoring & rational expressions',
+    'Polynomial & rational expressions','Exponential expressions',
+    'Radical expressions','Logarithms','Composing, computing numeric formulas',
+    'Polynomial & rational equations'
+  ],
+  'Grade 5': [
+    'Functions','Function concept','Linear functions','Quadratic functions',
+    'Cubic & other polynomial functions','Rational functions',
+    'Exponential & logarithmic functions','Trigonometric functions',
+    'Piecewise-defined functions','Greater & deeper analysis'
+  ],
+  'Grade 6': [
+    'Geometry — 2D shapes','Triangles & area','Simple & compound figures',
+    'Angles','Similarity, congruence, transformations','Solid geometry & volume',
+    'Area, perimeter, circumference'
+  ],
+  'Grade 7': [
+    'Measurement (length, weight, time)','Unit conversions',
+    'telling time / time zones','Multi-step unit problems',
+    'Distribution & spread','Probability','Descriptive statistics, compound events',
+    'Scatter plots, line of best fit, regression'
+  ],
+  'Grade 8': [
+    'Algebra — basic skills / remediation',
+    'Arithmetic, sight vocabulary','Computation & estimation',
+    'Computational fluency, number patterns','Fractions, decimals, percents',
+    'Arithmetic operations'
+  ],
+  'Pre-Algebra': [
+    'Addition & subtraction concepts','Basic fact fluency','Place value',
+    'Multi-digit operations','Word problems','Fractions & mixed numbers',
+    'Drill / speed & mental reasoning','Percents','Proportional reasoning',
+    'Expressions, equations & inequalities','Functions','Geometry','Measurement & statistics'
+  ],
+  'Algebra I': [
+    'Expressions, equations & inequalities',
+    'One-variable equations','Graphing on a number line','Inequalities',
+    'Polynomials','Factoring','Factoring & rational expressions',
+    'Polynomial & rational expressions','Exponential expressions',
+    'Radical expressions','Logarithms','Composing, computing numeric formulas',
+    'Polynomial & rational equations','Functions','Linear functions',
+    'Quadratic functions','Rational functions','Exponential & logarithmic functions',
+    'Data analysis & statistics','Geometry connections'
+  ],
+  'Geometry': [
+    'Geometry — 2D shapes','Triangles & area','Simple & compound figures',
+    'Angles','Similarity, congruence, transformations','Solid geometry & volume',
+    'Area, perimeter, circumference','Proofs','Coordinate geometry',
+    'Circles','Trigonometric ratios'
+  ],
+  'Algebra II': [
+    'Polynomials','Factoring & rational expressions','Exponential expressions',
+    'Radical expressions','Logarithms','Polynomial & rational equations',
+    'Functions','Quadratic functions','Cubic & other polynomial functions',
+    'Rational functions','Exponential & logarithmic functions',
+    'Trigonometric functions','Piecewise-defined functions',
+    'Sequences & series','Conic sections','Probability & statistics'
+  ],
+  'Pre-Calculus': [
+    'Trigonometric functions','Trigonometric identities & equations',
+    'Polar coordinates','Vectors','Complex numbers','Sequences & series',
+    'Conic sections','Limits intro','Exponential & logarithmic functions',
+    'Rational functions','Piecewise-defined functions','Greater & deeper analysis'
+  ],
+  'SAT/ACT Prep': [
+    'Arithmetic, sight vocabulary','Computation & estimation',
+    'Computational fluency, number patterns','Fractions, decimals, percents',
+    'Arithmetic operations','Algebra basics','Data analysis','Geometry review',
+    'Word problems','Test-taking strategies'
+  ]
 };
 
 let allFiles = [];
@@ -866,7 +943,7 @@ async function analyzeAll() {
           });
           if (expRes.ok) {
             const txt = await expRes.text();
-            if (txt && txt.length > 20) textContent += `\n\nSlide text content:\n${txt.slice(0, 3000)}`;
+            if (txt && txt.length > 20) textContent += `\n\nFull slide text content:\n${txt.slice(0, 6000)}`;
           }
         } catch(e) { /* filename-only analysis still works well */ }
       } else if (f.source === 'local' && f.localFile) {
@@ -874,12 +951,12 @@ async function analyzeAll() {
           const arrayBuf = await f.localFile.arrayBuffer();
           const bytes = new Uint8Array(arrayBuf);
           let raw = '';
-          for (let b = 0; b < Math.min(bytes.length, 8000); b++) {
+          for (let b = 0; b < Math.min(bytes.length, 20000); b++) {
             if (bytes[b] > 31 && bytes[b] < 127) raw += String.fromCharCode(bytes[b]);
             else raw += ' ';
           }
           const cleaned = raw.replace(/\s+/g, ' ').replace(/[^\x20-\x7E]/g, '').trim();
-          if (cleaned.length > 100) textContent += `\n\nExtracted text:\n${cleaned.slice(0, 2500)}`;
+          if (cleaned.length > 100) textContent += `\n\nExtracted text (full file scan):\n${cleaned.slice(0, 6000)}`;
         } catch(e) {}
       }
 
@@ -890,19 +967,20 @@ ${context ? `\nContext: ${context}` : ''}
 
 ${textContent}
 
-The AvatarMath ${grade} curriculum covers these topics: ${topics.join(', ')}.
-The term is ${weeks} weeks long. ${filenameWeek ? `The filename says this is Week ${filenameWeek} — use that as the suggestedWeek unless there is a strong reason not to.` : ''}
+IMPORTANT: You must map this slide ONLY to one of these exact AvatarMath ${grade} curriculum topics (copy the topic name exactly as written):
+${topics.map((t,i) => `${i+1}. ${t}`).join('\n')}
 
-Based on the topic hint and filename, map this slide to the best matching curriculum topic and provide learning details.
+Do NOT invent new topic names. Pick the single closest match from the list above.
+${filenameWeek ? `The filename says this is Week ${filenameWeek} — use that as the suggestedWeek.` : `The term is ${weeks} weeks long — suggest an appropriate week based on typical curriculum sequence.`}
 
 Respond ONLY with valid JSON (no markdown fences, no preamble, no explanation):
 {
-  "mainTopic": "single best-matching topic from the curriculum list",
-  "subtopics": ["2-4 specific skills or concepts covered"],
+  "mainTopic": "<exact topic name from the numbered list above>",
+  "subtopics": ["2-4 specific skills or concepts covered in this file"],
   "suggestedWeek": ${filenameWeek || `<number 1-${weeks}>`},
   "confidence": "high",
   "notes": "1-2 sentences describing what students learn in this slide deck",
-  "learningObjectives": ["2-3 clear student learning objectives starting with a verb like Solve, Identify, Apply, Graph, Simplify..."]
+  "learningObjectives": ["2-3 clear student learning objectives starting with a verb: Solve, Identify, Apply, Graph, Simplify, Factor, Evaluate..."]
 }`;
 
       const parsed = await callAnthropicWithRetry(anthropicKey, prompt, btn);
@@ -923,8 +1001,8 @@ Respond ONLY with valid JSON (no markdown fences, no preamble, no explanation):
       meta.textContent = `Failed — click retry`;
     }
 
-    // Small delay between requests to avoid rate limits
-    if (i < allFiles.length - 1) await sleep(600);
+    // Increased delay between requests — 2s minimum to avoid rate limits on large batches
+    if (i < allFiles.length - 1) await sleep(2000);
   }
 
   const failCount = analysisResults.filter(r => r.mainTopic === 'Unclassified').length;
@@ -973,7 +1051,7 @@ async function callAnthropicWithRetry(key, prompt, btn, maxRetries = 3) {
       }
       if (errType === 'rate_limit_error' || apiData.error.message?.includes('rate limit') || apiRes.status === 429) {
         if (attempt < maxRetries) {
-          const wait = attempt * 8000; // 8s, 16s back-off
+          const wait = attempt * 15000; // 15s, 30s back-off
           showProgress('loadProgress', 'loadFill', 'loadLabel', -1, `Rate limited — waiting ${wait/1000}s before retry ${attempt}/${maxRetries}...`);
           await sleep(wait);
           continue;
@@ -981,7 +1059,7 @@ async function callAnthropicWithRetry(key, prompt, btn, maxRetries = 3) {
       }
       if (errType === 'overloaded_error' || apiRes.status === 529 || apiRes.status === 503) {
         if (attempt < maxRetries) {
-          await sleep(5000 * attempt);
+          await sleep(10000 * attempt);
           continue;
         }
       }
@@ -1056,7 +1134,7 @@ Return ONLY valid JSON, no fences:
       meta.textContent = 'Still failed';
     }
 
-    if (idx < failedIndices.length - 1) await sleep(800);
+    if (idx < failedIndices.length - 1) await sleep(2000);
   }
 
   const stillFailed = analysisResults.filter(r => r.mainTopic === 'Unclassified').length;
