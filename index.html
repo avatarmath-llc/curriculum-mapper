@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AvatarMath — Curriculum Mapper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue: #1a4fa0;
+  --blue-light: #e8f0fc;
+  --blue-mid: #3b6fd4;
+  --gold: #d4a017;
+  --gold-light: #fdf6e3;
+  --green: #1a7a4a;
+  --green-light: #e6f4ed;
+  --red: #c0392b;
+  --red-light: #fdecea;
+  --gray-50: #f8f9fb;
+  --gray-100: #f0f2f5;
+  --gray-200: #e2e6ed;
+  --gray-400: #9aa3b2;
+  --gray-600: #5a6478;
+  --gray-800: #1e2535;
+  --white: #ffffff;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 2px 12px rgba(26,79,160,0.08);
+  --shadow-lg: 0 8px 32px rgba(26,79,160,0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-800);
+  min-height: 100vh;
+}
+
+header {
+  background: var(--blue);
+  padding: 0 2rem;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.3rem;
+  color: var(--white);
+  letter-spacing: 0.01em;
+}
+
+.logo span { color: #ffd166; }
+
+.header-sub {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+/* Config panel */
+.config-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.config-card h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--blue);
+  margin-bottom: 1.25rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+.field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.field input, .field select, .field textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  color: var(--gray-800);
+  background: var(--white);
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--blue-mid);
+  box-shadow: 0 0 0 3px rgba(59,111,212,0.1);
+}
+
+.field textarea { resize: vertical; min-height: 70px; font-size: 0.85rem; }
+
+.field-full { grid-column: 1 / -1; }
+
+.api-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 600px) { .api-row { grid-template-columns: 1fr; } }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.btn-primary {
+  background: var(--blue);
+  color: var(--white);
+}
+
+.btn-primary:hover { background: #153d82; }
+.btn-primary:disabled { background: var(--gray-400); cursor: not-allowed; }
+
+.btn-outline {
+  background: transparent;
+  color: var(--blue);
+  border: 1px solid var(--blue);
+}
+
+.btn-outline:hover { background: var(--blue-light); }
+
+.btn-gold {
+  background: var(--gold);
+  color: var(--white);
+}
+
+.btn-gold:hover { background: #b8890f; }
+
+.btn-sm { padding: 6px 14px; font-size: 0.82rem; }
+
+/* Progress */
+.progress-wrap {
+  margin: 1rem 0 0;
+  display: none;
+}
+
+.progress-bar {
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue-mid), var(--gold));
+  border-radius: 2px;
+  transition: width 0.4s ease;
+  width: 0%;
+}
+
+.progress-label {
+  font-size: 0.8rem;
+  color: var(--gray-600);
+  margin-top: 6px;
+}
+
+/* File list */
+.file-section { margin-bottom: 1.5rem; display: none; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.section-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--blue);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-blue { background: var(--blue-light); color: var(--blue); }
+.badge-green { background: var(--green-light); color: var(--green); }
+.badge-gold { background: var(--gold-light); color: #8a6500; }
+.badge-gray { background: var(--gray-100); color: var(--gray-600); }
+
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.file-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  transition: border-color 0.15s;
+}
+
+.file-card.analyzing { border-color: var(--blue-mid); background: var(--blue-light); }
+.file-card.done { border-color: var(--green); }
+.file-card.error { border-color: var(--red); background: var(--red-light); }
+
+.file-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.icon-pdf { background: #fdecea; color: var(--red); }
+.icon-ppt { background: #fef3e8; color: #c0621a; }
+
+.file-info { flex: 1; min-width: 0; }
+
+.file-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-meta {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+
+.file-topic {
+  font-size: 0.75rem;
+  color: var(--blue);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* Results */
+.results-section { display: none; }
+
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--gray-200);
+  margin-bottom: 1.5rem;
+}
+
+.tab {
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.tab:hover { color: var(--blue); }
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Slide map table */
+.slide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.slide-table th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slide-table th:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.slide-table th:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+
+.slide-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: top;
+}
+
+.slide-table tr:last-child td { border-bottom: none; }
+.slide-table tr:hover td { background: var(--gray-50); }
+
+.topic-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--blue-light);
+  color: var(--blue);
+  margin: 2px;
+}
+
+.subtopic-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  margin: 2px;
+}
+
+.conf-high { color: var(--green); font-weight: 500; }
+.conf-medium { color: var(--gold); font-weight: 500; }
+.conf-low { color: var(--red); font-weight: 500; }
+
+/* Weekly plan */
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.week-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.week-header {
+  background: var(--blue);
+  color: var(--white);
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.week-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.week-body { padding: 12px 14px; }
+
+.week-topic {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--gray-800);
+  margin-bottom: 6px;
+}
+
+.week-slides {
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  margin-bottom: 8px;
+}
+
+.week-objectives {
+  list-style: none;
+  padding: 0;
+}
+
+.week-objectives li {
+  font-size: 0.78rem;
+  color: var(--gray-600);
+  padding: 2px 0 2px 14px;
+  position: relative;
+}
+
+.week-objectives li::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  color: var(--blue-mid);
+  font-weight: 500;
+}
+
+/* Curriculum overview */
+.curriculum-overview {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.curriculum-overview h3 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--blue);
+  margin-bottom: 1rem;
+}
+
+.topic-cluster {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.topic-cluster:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+.cluster-name {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--gray-800);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cluster-files {
+  font-size: 0.78rem;
+  color: var(--gray-400);
+  margin-bottom: 6px;
+}
+
+.export-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+/* Empty / loading states */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--gray-400);
+}
+
+.empty-state svg { margin-bottom: 1rem; opacity: 0.4; }
+.empty-state p { font-size: 0.9rem; }
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.alert {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.alert-error { background: var(--red-light); color: var(--red); border: 1px solid #f5c6c2; }
+.alert-info { background: var(--blue-light); color: var(--blue); border: 1px solid #c5d8f8; }
+.alert-success { background: var(--green-light); color: var(--green); border: 1px solid #b3dfc9; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Avatar<span>Math</span> <span style="font-family:'DM Sans';font-size:0.85rem;color:rgba(255,255,255,0.7);font-weight:300;margin-left:8px;">Curriculum Mapper</span></div>
+  <div class="header-sub">AI-Powered Slide Analysis</div>
+</header>
+
+<div class="main">
+
+  <!-- Config Card -->
+  <div class="config-card">
+    <h2>Configure your analysis</h2>
+
+    <div class="api-row">
+      <div class="field">
+        <label>Anthropic API Key</label>
+        <input type="password" id="anthropicKey" placeholder="sk-ant-..." />
+      </div>
+      <div class="field">
+        <label>Google Drive API Key</label>
+        <input type="password" id="driveApiKey" placeholder="AIza..." />
+      </div>
+      <div class="field">
+        <label>Google OAuth Token <span style="font-weight:300;color:var(--gray-400)">(for private folders)</span></label>
+        <input type="password" id="oauthToken" placeholder="ya29... (optional)" />
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label>Google Drive Folder URL or ID</label>
+        <input type="text" id="folderId" placeholder="https://drive.google.com/drive/folders/..." />
+      </div>
+      <div class="field">
+        <label>Grade Level</label>
+        <select id="gradeLevel">
+          <option value="">Select grade...</option>
+          <optgroup label="Elementary">
+            <option>Kindergarten</option>
+            <option>Grade 1</option><option>Grade 2</option>
+            <option>Grade 3</option><option>Grade 4</option><option>Grade 5</option>
+          </optgroup>
+          <optgroup label="Middle School">
+            <option>Grade 6</option><option>Grade 7</option><option>Grade 8</option>
+            <option>Pre-Algebra</option>
+          </optgroup>
+          <optgroup label="High School">
+            <option>Algebra I</option><option>Geometry</option>
+            <option>Algebra II</option><option>Pre-Calculus</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="field">
+        <label>Total Weeks in Term</label>
+        <input type="number" id="totalWeeks" value="16" min="4" max="40" />
+      </div>
+      <div class="field">
+        <label>Additional Context <span style="font-weight:300;color:var(--gray-400)">(optional)</span></label>
+        <input type="text" id="context" placeholder="e.g. Singapore Math curriculum, remedial focus..." />
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="loadBtn" onclick="loadDriveFolder()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Load slides from Drive
+      </button>
+      <button class="btn btn-outline" onclick="document.getElementById('localFiles').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload local files
+      </button>
+      <input type="file" id="localFiles" multiple accept=".pdf,.pptx,.ppt" style="display:none" onchange="handleLocalFiles(this.files)" />
+      <div id="configAlert"></div>
+    </div>
+
+    <div class="progress-wrap" id="loadProgress">
+      <div class="progress-bar"><div class="progress-fill" id="loadFill"></div></div>
+      <div class="progress-label" id="loadLabel">Loading...</div>
+    </div>
+  </div>
+
+  <!-- File List -->
+  <div class="file-section" id="fileSection">
+    <div class="section-header">
+      <div class="section-title">Slides found</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span class="badge badge-blue" id="fileCount">0 files</span>
+        <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeAll()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          Analyze all with AI
+        </button>
+      </div>
+    </div>
+    <div class="file-grid" id="fileGrid"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-section" id="resultsSection">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('slides')">Slide mapping</button>
+      <button class="tab" onclick="switchTab('weekly')">Weekly plan</button>
+      <button class="tab" onclick="switchTab('overview')">Curriculum overview</button>
+    </div>
+
+    <div class="tab-content active" id="tab-slides">
+      <div style="overflow-x:auto;">
+        <table class="slide-table">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Main topic</th>
+              <th>Subtopics</th>
+              <th>Week</th>
+              <th>Confidence</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="slideTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-weekly">
+      <div class="week-grid" id="weekGrid"></div>
+    </div>
+
+    <div class="tab-content" id="tab-overview">
+      <div class="curriculum-overview">
+        <h3 id="overviewTitle">Curriculum Overview</h3>
+        <div id="overviewBody"></div>
+        <div class="export-row">
+          <button class="btn btn-primary btn-sm" onclick="exportCSV()">Export CSV</button>
+          <button class="btn btn-outline btn-sm" onclick="exportJSON()">Export JSON</button>
+          <button class="btn btn-outline btn-sm" onclick="copyMarkdown()">Copy as Markdown</button>
+          <button class="btn btn-gold btn-sm" onclick="window.open('https://avatarmath-llc.github.io/curriculum-planning-tool/curriculum.html','_blank')">Open curriculum tool →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CURRICULUM = {
+  'Kindergarten': ['counting 1–10','number recognition','basic shapes','patterns','comparing quantities','addition intro'],
+  'Grade 1': ['addition to 20','subtraction to 20','place value (tens/ones)','measurement','telling time','shapes & fractions intro'],
+  'Grade 2': ['addition/subtraction to 100','place value to 1000','multiplication intro','measurement & data','geometry','fractions intro'],
+  'Grade 3': ['multiplication facts','division facts','fractions','area & perimeter','time & measurement','data & graphs'],
+  'Grade 4': ['multi-digit multiplication','long division','fractions & decimals','angles & geometry','factors & multiples','measurement conversions'],
+  'Grade 5': ['decimal operations','fraction operations','volume','coordinate plane','order of operations','patterns & rules'],
+  'Grade 6': ['ratios & rates','percentages','integers','expressions & equations','geometry (area/surface area)','statistics & probability'],
+  'Grade 7': ['proportional relationships','inequalities','geometry (circles/angles)','probability','rational numbers','scale drawings'],
+  'Grade 8': ['linear equations','systems of equations','functions','exponents & scientific notation','Pythagorean theorem','transformations'],
+  'Pre-Algebra': ['variables & expressions','linear equations','inequalities','functions & graphing','proportions','intro to polynomials'],
+  'Algebra I': ['linear equations & inequalities','systems of equations','polynomials','factoring','quadratic equations','functions'],
+  'Geometry': ['triangle congruence & similarity','circles','coordinate geometry','proofs','transformations','area & volume'],
+  'Algebra II': ['polynomial functions','rational functions','exponential & logarithmic functions','sequences & series','conic sections','probability'],
+  'Pre-Calculus': ['trigonometry','vectors & matrices','limits intro','polar coordinates','complex numbers','sequences & series']
+};
+
+let allFiles = [];
+let analysisResults = [];
+
+function getToken() { return document.getElementById('oauthToken').value.trim(); }
+function getApiKey() { return document.getElementById('driveApiKey').value.trim(); }
+function getAnthropicKey() { return document.getElementById('anthropicKey').value.trim(); }
+function getGrade() { return document.getElementById('gradeLevel').value; }
+function getWeeks() { return parseInt(document.getElementById('totalWeeks').value) || 16; }
+
+function setAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.innerHTML = msg ? `<div class="alert alert-${type}">${msg}</div>` : '';
+}
+
+function extractFolderId(raw) {
+  if (raw.includes('folders/')) return raw.split('folders/')[1].split('?')[0].split('/')[0];
+  return raw.trim();
+}
+
+async function loadDriveFolder() {
+  const raw = document.getElementById('folderId').value.trim();
+  const grade = getGrade();
+  if (!raw) return setAlert('configAlert', 'Please enter a Google Drive folder URL or ID.', 'error');
+  if (!grade) return setAlert('configAlert', 'Please select a grade level.', 'error');
+  if (!getApiKey() && !getToken()) return setAlert('configAlert', 'Please enter a Google Drive API Key or OAuth Token.', 'error');
+
+  const fid = extractFolderId(raw);
+  const btn = document.getElementById('loadBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Loading...';
+  setAlert('configAlert', '', '');
+  showProgress('loadProgress', 'loadFill', 'loadLabel', 30, 'Connecting to Google Drive...');
+
+  try {
+    const headers = {};
+    if (getToken()) headers['Authorization'] = `Bearer ${getToken()}`;
+
+    const query = `'${fid}' in parents and (mimeType='application/vnd.openxmlformats-officedocument.presentationml.presentation' or mimeType='application/pdf' or mimeType='application/vnd.ms-powerpoint') and trashed=false`;
+    const keyParam = getApiKey() ? `&key=${getApiKey()}` : '';
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,modifiedTime)&pageSize=100${keyParam}`;
+
+    const res = await fetch(url, { headers });
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error.message);
+    if (!data.files || !data.files.length) throw new Error('No PDF or PPTX files found in that folder.');
+
+    allFiles = data.files.map(f => ({ ...f, source: 'drive' }));
+    showProgress('loadProgress', 'loadFill', 'loadLabel', 100, `Found ${allFiles.length} files`);
+    setTimeout(() => { document.getElementById('loadProgress').style.display = 'none'; renderFileGrid(); }, 600);
+
+  } catch(e) {
+    setAlert('configAlert', `Error: ${e.message}`, 'error');
+    document.getElementById('loadProgress').style.display = 'none';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Load slides from Drive';
+}
+
+function handleLocalFiles(fileList) {
+  const grade = getGrade();
+  if (!grade) return setAlert('configAlert', 'Please select a grade level first.', 'error');
+  allFiles = Array.from(fileList).map(f => ({
+    id: f.name, name: f.name,
+    mimeType: f.type || (f.name.endsWith('.pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.presentationml.presentation'),
+    localFile: f, source: 'local'
+  }));
+  renderFileGrid();
+}
+
+function renderFileGrid() {
+  const grid = document.getElementById('fileGrid');
+  document.getElementById('fileCount').textContent = `${allFiles.length} files`;
+  grid.innerHTML = allFiles.map((f, i) => `
+    <div class="file-card" id="fc-${i}">
+      <div class="file-icon ${f.name.toLowerCase().endsWith('.pdf') ? 'icon-pdf' : 'icon-ppt'}">${f.name.toLowerCase().endsWith('.pdf') ? 'PDF' : 'PPT'}</div>
+      <div class="file-info">
+        <div class="file-name" title="${f.name}">${f.name}</div>
+        <div class="file-meta" id="fm-${i}">Ready to analyze</div>
+        <div class="file-topic" id="ft-${i}"></div>
+      </div>
+    </div>`).join('');
+  document.getElementById('fileSection').style.display = 'block';
+  document.getElementById('resultsSection').style.display = 'none';
+  analysisResults = [];
+}
+
+function showProgress(wrapId, fillId, labelId, pct, msg) {
+  const w = document.getElementById(wrapId);
+  w.style.display = 'block';
+  document.getElementById(fillId).style.width = pct + '%';
+  document.getElementById(labelId).textContent = msg;
+}
+
+async function analyzeAll() {
+  const grade = getGrade();
+  const anthropicKey = getAnthropicKey();
+  if (!anthropicKey) return setAlert('configAlert', 'Please enter your Anthropic API Key to analyze slides.', 'error');
+  if (!grade) return setAlert('configAlert', 'Please select a grade level.', 'error');
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+  showProgress('loadProgress', 'loadFill', 'loadLabel', 0, 'Starting analysis...');
+  document.getElementById('loadProgress').style.display = 'block';
+
+  const topics = CURRICULUM[grade] || [];
+  analysisResults = [];
+
+  for (let i = 0; i < allFiles.length; i++) {
+    const f = allFiles[i];
+    const card = document.getElementById(`fc-${i}`);
+    const meta = document.getElementById(`fm-${i}`);
+    const topicEl = document.getElementById(`ft-${i}`);
+
+    card.className = 'file-card analyzing';
+    meta.textContent = 'Analyzing...';
+
+    const pct = Math.round((i / allFiles.length) * 100);
+    showProgress('loadProgress', 'loadFill', 'loadLabel', pct, `Analyzing ${i+1} of ${allFiles.length}: ${f.name}`);
+
+    try {
+      let textContent = `Slide file name: "${f.name}"`;
+
+      if (f.source === 'drive' && getToken()) {
+        try {
+          const expRes = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}/export?mimeType=text/plain`, {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+          });
+          if (expRes.ok) {
+            const txt = await expRes.text();
+            textContent += `\n\nSlide text content:\n${txt.slice(0, 3000)}`;
+          }
+        } catch(e) {}
+      } else if (f.source === 'local' && f.localFile) {
+        try {
+          const arrayBuf = await f.localFile.arrayBuffer();
+          const bytes = new Uint8Array(arrayBuf);
+          let raw = '';
+          for (let b = 0; b < Math.min(bytes.length, 8000); b++) {
+            if (bytes[b] > 31 && bytes[b] < 127) raw += String.fromCharCode(bytes[b]);
+            else raw += ' ';
+          }
+          const cleaned = raw.replace(/\s+/g, ' ').replace(/[^\x20-\x7E]/g, '').trim();
+          if (cleaned.length > 100) textContent += `\n\nExtracted text:\n${cleaned.slice(0, 2500)}`;
+        } catch(e) {}
+      }
+
+      const weeks = getWeeks();
+      const context = document.getElementById('context').value.trim();
+      const prompt = `You are an expert math curriculum specialist analyzing a slide deck for ${grade} students at AvatarMath tutoring center.
+
+${context ? `Context: ${context}` : ''}
+
+File: "${f.name}"
+Content: ${textContent}
+
+The AvatarMath ${grade} curriculum covers these topics: ${topics.join(', ')}.
+
+This file is slide ${i+1} of ${allFiles.length} total. The term is ${weeks} weeks long.
+
+Respond ONLY with valid JSON (no markdown fences, no preamble):
+{
+  "mainTopic": "single best-matching topic from the curriculum list above",
+  "subtopics": ["2-4 specific subtopics or skills covered"],
+  "suggestedWeek": <suggested week number 1-${weeks} based on typical curriculum progression>,
+  "confidence": "high|medium|low",
+  "notes": "1-2 sentences about what this slide deck covers and how it fits the curriculum",
+  "learningObjectives": ["2-3 student learning objectives from this material"]
+}`;
+
+      const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const apiData = await apiRes.json();
+      if (apiData.error) throw new Error(apiData.error.message);
+      const raw = apiData.content?.[0]?.text || '{}';
+      const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+      analysisResults.push({ file: f.name, index: i, ...parsed });
+      card.className = 'file-card done';
+      meta.textContent = `Week ${parsed.suggestedWeek || '?'} · ${parsed.confidence} confidence`;
+      topicEl.textContent = parsed.mainTopic || '';
+
+    } catch(e) {
+      analysisResults.push({ file: f.name, index: i, mainTopic: 'Unclassified', subtopics: [], suggestedWeek: null, confidence: 'low', notes: `Error: ${e.message}`, learningObjectives: [] });
+      card.className = 'file-card error';
+      meta.textContent = 'Analysis failed';
+    }
+  }
+
+  showProgress('loadProgress', 'loadFill', 'loadLabel', 100, `Done — ${allFiles.length} slides analyzed`);
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Re-analyze all';
+
+  renderResults();
+}
+
+function renderResults() {
+  const grade = getGrade();
+  const weeks = getWeeks();
+
+  // Slide table
+  const tbody = document.getElementById('slideTableBody');
+  const sorted = [...analysisResults].sort((a,b) => (a.suggestedWeek||99) - (b.suggestedWeek||99));
+  tbody.innerHTML = sorted.map(r => `
+    <tr>
+      <td style="max-width:180px;word-break:break-word;font-size:0.82rem;">${r.file}</td>
+      <td><span class="topic-pill">${r.mainTopic}</span></td>
+      <td>${(r.subtopics||[]).map(s => `<span class="subtopic-pill">${s}</span>`).join('')}</td>
+      <td style="text-align:center;font-weight:500;">${r.suggestedWeek || '—'}</td>
+      <td class="conf-${r.confidence}">${r.confidence}</td>
+      <td style="font-size:0.78rem;color:var(--gray-600);max-width:220px;">${r.notes||''}</td>
+    </tr>`).join('');
+
+  // Weekly plan
+  const byWeek = {};
+  analysisResults.forEach(r => {
+    const w = r.suggestedWeek || weeks;
+    if (!byWeek[w]) byWeek[w] = [];
+    byWeek[w].push(r);
+  });
+
+  const weekGrid = document.getElementById('weekGrid');
+  const weekNums = Object.keys(byWeek).map(Number).sort((a,b)=>a-b);
+  weekGrid.innerHTML = weekNums.map(w => {
+    const items = byWeek[w];
+    const topics = [...new Set(items.map(i => i.mainTopic))];
+    const objectives = items.flatMap(i => i.learningObjectives || []).slice(0,4);
+    return `
+    <div class="week-card">
+      <div class="week-header">
+        <div class="week-num">Week ${w}</div>
+        <span style="font-size:0.75rem;opacity:0.7;">${items.length} slide${items.length>1?'s':''}</span>
+      </div>
+      <div class="week-body">
+        <div class="week-topic">${topics.join(' + ')}</div>
+        <div class="week-slides">${items.map(i=>i.file).join(', ')}</div>
+        ${objectives.length ? `<ul class="week-objectives">${objectives.map(o=>`<li>${o}</li>`).join('')}</ul>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Curriculum overview
+  document.getElementById('overviewTitle').textContent = `${grade} — ${weeks}-Week Curriculum`;
+  const grouped = {};
+  analysisResults.forEach(r => {
+    if (!grouped[r.mainTopic]) grouped[r.mainTopic] = [];
+    grouped[r.mainTopic].push(r);
+  });
+  const topicsSorted = Object.entries(grouped).sort((a,b) => {
+    const aw = Math.min(...a[1].map(x=>x.suggestedWeek||99));
+    const bw = Math.min(...b[1].map(x=>x.suggestedWeek||99));
+    return aw - bw;
+  });
+
+  document.getElementById('overviewBody').innerHTML = topicsSorted.map(([topic, items]) => {
+    const weeksUsed = [...new Set(items.map(i=>i.suggestedWeek).filter(Boolean))].sort((a,b)=>a-b);
+    const allObjectives = [...new Set(items.flatMap(i=>i.learningObjectives||[]))];
+    const allSubs = [...new Set(items.flatMap(i=>i.subtopics||[]))];
+    return `
+    <div class="topic-cluster">
+      <div class="cluster-name">
+        <span>${topic}</span>
+        <span class="badge badge-blue">Weeks ${weeksUsed.join(', ') || '—'}</span>
+        <span class="badge badge-gray">${items.length} file${items.length>1?'s':''}</span>
+      </div>
+      <div class="cluster-files">${items.map(i=>i.file).join(' · ')}</div>
+      <div>${allSubs.map(s=>`<span class="subtopic-pill">${s}</span>`).join('')}</div>
+      ${allObjectives.length ? `<div style="margin-top:6px;font-size:0.78rem;color:var(--gray-600);">${allObjectives.slice(0,3).join(' · ')}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('resultsSection').style.display = 'block';
+  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['slides','weekly','overview'][i]===name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+function exportCSV() {
+  const rows = ['File,Main Topic,Subtopics,Week,Confidence,Notes,Learning Objectives'];
+  analysisResults.forEach(r => rows.push([
+    `"${r.file}"`, `"${r.mainTopic}"`,
+    `"${(r.subtopics||[]).join('; ')}"`,
+    r.suggestedWeek||'', r.confidence,
+    `"${(r.notes||'').replace(/"/g,"'")}"`,
+    `"${(r.learningObjectives||[]).join('; ')}"`
+  ].join(',')));
+  download(`curriculum-${getGrade()}.csv`, rows.join('\n'), 'text/csv');
+}
+
+function exportJSON() {
+  download(`curriculum-${getGrade()}.json`, JSON.stringify({ grade: getGrade(), weeks: getWeeks(), slides: analysisResults }, null, 2), 'application/json');
+}
+
+function copyMarkdown() {
+  const grade = getGrade();
+  let md = `# ${grade} Curriculum Map\n\n`;
+  const byWeek = {};
+  analysisResults.forEach(r => { const w = r.suggestedWeek||'?'; if(!byWeek[w]) byWeek[w]=[]; byWeek[w].push(r); });
+  Object.keys(byWeek).sort((a,b)=>Number(a)-Number(b)).forEach(w => {
+    md += `## Week ${w}\n`;
+    byWeek[w].forEach(r => {
+      md += `### ${r.mainTopic}\n- File: ${r.file}\n- Subtopics: ${(r.subtopics||[]).join(', ')}\n`;
+      (r.learningObjectives||[]).forEach(o => { md += `- ${o}\n`; });
+      md += '\n';
+    });
+  });
+  navigator.clipboard.writeText(md).then(()=>alert('Markdown copied to clipboard!'));
+}
+
+function download(filename, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename;
+  a.click();
+}
+</script>
+</body>
+</html>
